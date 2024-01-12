@@ -6,6 +6,41 @@
 
 namespace transportcatalogue {
 namespace reader {
+namespace detail{
+void PrintBusInfo(const TransportCatalogue& transport_catalogue, std::string_view bus, std::ostream& output) {
+    using namespace std::literals::string_literals;
+    if (transport_catalogue.FindBus(bus)) {
+        auto bus_info = transport_catalogue.GetBusInfo(bus);
+        output << bus_info.count_all_stops << " stops on route, "s <<
+            bus_info.count_unique_stops << " unique stops, "s <<
+            bus_info.route_lenght << " route length"s << std::endl;
+    }
+    else {
+        output << "not found"s << std::endl;
+    }
+}
+
+void PrintStopInfo(const TransportCatalogue& transport_catalogue, std::string_view stop, std::ostream& output) {
+    using namespace std::literals::string_literals;
+    if (transport_catalogue.FindStop(stop)) {
+        const std::set<std::string_view> buses = transport_catalogue.GetBusesPassingThroughStop(stop);
+        if (buses.empty()) {
+            output << "no buses"s << std::endl;
+        }
+        else {
+            output << "buses"s;
+            for (auto bus : buses) {
+                std::string x = std::string(bus);
+                output << " "s << x;
+            }
+            output << std::endl;
+        }
+    }
+    else {
+        output << "not found"s << std::endl;
+    }
+}
+}
 
 void ParseAndPrintStat(const TransportCatalogue& transport_catalogue, std::string_view request,
     std::ostream& output) {
@@ -15,33 +50,10 @@ void ParseAndPrintStat(const TransportCatalogue& transport_catalogue, std::strin
     const std::string id = std::string(request.substr(space + 1));
     output << std::setprecision(6) << command << " "s << id << ": "s;
     if (command == "Bus"s) {
-        if (transport_catalogue.FindBus(id)) {
-            output << transport_catalogue.CountBusStops(id) << " stops on route, "s <<
-                transport_catalogue.CountUniqueBusStops(id) << " unique stops, "s <<
-                transport_catalogue.ComputeRouteLength(id) << " route length"s << std::endl;
-        }
-        else {
-            output << "not found"s << std::endl;
-        }
+        detail::PrintBusInfo(transport_catalogue, id, output);
     }
     else if (command == "Stop"s) {
-        if (transport_catalogue.FindStop(id)) {
-            const std::set<std::string_view> buses = transport_catalogue.GetBusesPassingThroughStop(id);
-            if (buses.empty()) {
-                output << "no buses"s << std::endl;
-            }
-            else {
-                output << "buses"s;
-                for (auto bus : buses) {
-                    std::string x = std::string(bus);
-                    output << " "s << x;
-                }
-                output << std::endl;
-            }
-        }
-        else {
-            output << "not found"s << std::endl;
-        }
+        detail::PrintStopInfo(transport_catalogue, id, output);
     }
 }
 }

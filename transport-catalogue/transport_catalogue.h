@@ -11,24 +11,7 @@
 namespace transportcatalogue {
 
 class TransportCatalogue {
-public:
-	void AddStop(const std::string& name, geo::Coordinates coordinates);
 
-	void AddBus(const std::string& name, const std::vector<std::string_view>& str_route);
-
-	bool FindBus(std::string_view name) const;
-
-	bool FindStop(std::string_view name) const;
-
-	size_t CountBusStops(const std::string& name) const;
-
-	size_t CountUniqueBusStops(const std::string& name) const;
-
-	double ComputeRouteLength(const std::string& name) const;
-
-	std::set<std::string_view> GetBusesPassingThroughStop(std::string_view stop) const;
-
-private:
 	struct Stop {
 		std::string name;
 		geo::Coordinates coordinates;
@@ -38,6 +21,27 @@ private:
 		std::string name;
 		std::vector<Stop*> route;
 	};
+
+	struct BusInfo {
+		size_t count_all_stops;
+		size_t count_unique_stops;
+		double route_lenght;
+	};
+
+public:
+	void AddStop(const std::string& name, geo::Coordinates coordinates);
+
+	void AddBus(const std::string& name, const std::vector<std::string_view>& str_route);
+
+	Bus* FindBus(std::string_view name) const;
+
+	Stop* FindStop(std::string_view name) const;
+
+	BusInfo GetBusInfo(std::string_view name) const;
+
+	std::set<std::string_view> GetBusesPassingThroughStop(std::string_view stop) const;
+
+private:
 
 	std::deque<Stop> stops_;
 	std::unordered_map<std::string_view, Stop*> stopname_to_stop_;
