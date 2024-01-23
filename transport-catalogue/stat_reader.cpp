@@ -13,7 +13,8 @@ void PrintBusInfo(const TransportCatalogue& transport_catalogue, std::string_vie
         auto bus_info = transport_catalogue.GetBusInfo(bus);
         output << bus_info.count_all_stops << " stops on route, "s <<
             bus_info.count_unique_stops << " unique stops, "s <<
-            bus_info.route_lenght << " route length"s << std::endl;
+            bus_info.route_lenght << " route length, "s <<
+            bus_info.curvature << " curvature"s << std::endl;
     }
     else {
         output << "not found"s << std::endl;

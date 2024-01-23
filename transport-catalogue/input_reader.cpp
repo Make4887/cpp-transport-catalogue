@@ -22,10 +22,42 @@ transportcatalogue::geo::Coordinates Coordinates(std::string_view str) {
 
     auto not_space2 = str.find_first_not_of(' ', comma + 1);
 
-    double lat = std::stod(std::string(str.substr(not_space, comma - not_space)));
-    double lng = std::stod(std::string(str.substr(not_space2)));
+    auto comma2 = str.find(',', not_space2);
 
+    double lat = std::stod(std::string(str.substr(not_space, comma - not_space)));
+    double lng;
+    if (comma2 == str.npos) {
+        lng = std::stod(std::string(str.substr(not_space2)));
+    }
+    else {
+        lng = std::stod(std::string(str.substr(not_space2, comma2 - not_space2)));
+    }
+    
     return { lat, lng };
+}
+
+std::unordered_map<std::string_view, int> Distances(std::string_view str) {
+    std::unordered_map<std::string_view, int> result;
+    auto comma = str.find(',');
+    comma = str.find(',', comma + 1);
+
+    while (comma != str.npos) {
+        auto not_space = str.find_first_not_of(' ', comma + 1);
+        auto leter_m = str.find('m', not_space);
+        int dist = std::stoi(std::string(str.substr(not_space, leter_m - not_space)));
+        auto leter_o = str.find('o', leter_m);
+        auto not_space2 = str.find_first_not_of(' ', leter_o + 1);
+        comma = str.find(',', not_space2);
+        std::string_view stop_name;
+        if (comma == str.npos) {
+            stop_name = str.substr(not_space2);
+        }
+        else {
+            stop_name = str.substr(not_space2, comma - not_space2);
+        }
+        result.insert({ stop_name, dist });
+    }
+    return result;
 }
 
 namespace detail{
@@ -114,6 +146,11 @@ void InputReader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) 
     for (const CommandDescription& command_description : commands_) {
         if (command_description.command == "Stop"s) {
             catalogue.AddStop(command_description.id, parse::Coordinates(command_description.description));
+        }
+    }
+    for (const CommandDescription& command_description : commands_) {
+        if (command_description.command == "Stop"s) {
+            catalogue.AddDistances(command_description.id, parse::Distances(command_description.description));
         }
     }
     for (const CommandDescription& command_description : commands_) {

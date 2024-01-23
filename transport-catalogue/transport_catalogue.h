@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <deque>
+#include <functional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -25,11 +26,23 @@ class TransportCatalogue {
 	struct BusInfo {
 		size_t count_all_stops;
 		size_t count_unique_stops;
-		double route_lenght;
+		int route_lenght;
+		double curvature;
+	};
+
+	struct StopsHasher {
+		size_t operator()(const std::pair<Stop*, Stop*>& stops) const {
+			static const size_t N = 37;
+			return bus_hasher_(stops.first) + N * bus_hasher_(stops.second);
+		}
+	private:
+		std::hash<Stop*> bus_hasher_;
 	};
 
 public:
 	void AddStop(const std::string& name, geo::Coordinates coordinates);
+
+	void AddDistances(std::string_view name, std::unordered_map<std::string_view, int> distances);
 
 	void AddBus(const std::string& name, const std::vector<std::string_view>& str_route);
 
@@ -48,5 +61,6 @@ private:
 	std::deque<Bus> buses_;
 	std::unordered_map<std::string_view, Bus*> busname_to_bus_;
 	std::unordered_map<Stop*, std::set<std::string_view>> stop_to_busnames_;
+	std::unordered_map<std::pair<Stop*, Stop*>, int, StopsHasher> distance_between_stops_;
 };
 }

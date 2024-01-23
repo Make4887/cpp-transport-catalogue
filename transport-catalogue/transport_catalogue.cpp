@@ -10,6 +10,17 @@ void TransportCatalogue::AddStop(const std::string& name, geo::Coordinates coord
 	stopname_to_stop_[stops_.back().name] = &stops_.back();
 }
 
+void TransportCatalogue::AddDistances(std::string_view name, std::unordered_map<std::string_view, int> distances) {
+	Stop* main_stop = stopname_to_stop_.at(name);
+	for (auto [neighbour_name, dist] : distances) {
+		Stop* neighbour_stop = stopname_to_stop_.at(neighbour_name);
+		distance_between_stops_[{main_stop, neighbour_stop}] = dist;
+		if (distance_between_stops_.count({ neighbour_stop, main_stop }) == 0) {
+			distance_between_stops_[{neighbour_stop, main_stop}] = dist;
+		}
+	}
+}
+
 void TransportCatalogue::AddBus(const std::string& name, const std::vector<std::string_view>& str_route) {
 	std::vector<Stop*> route(str_route.size());
 	for (int i = 0; i < static_cast<int>(route.size()); ++i) {
@@ -43,11 +54,16 @@ TransportCatalogue::BusInfo TransportCatalogue::GetBusInfo(std::string_view bus)
 	const std::unordered_set<Stop*> unique_stops(route.begin(), route.end());
 	const size_t count_unique_stops = unique_stops.size();
 
-	double route_lenght = 0.;
+	int route_lenght = 0;
 	for (int i = 1; i < static_cast<int>(route.size()); ++i) {
-		route_lenght += geo::ComputeDistance(route[i - 1]->coordinates, route[i]->coordinates);
+		route_lenght += distance_between_stops_.at({ route[i - 1], route[i] });
 	}
-	return { count_all_stops, count_unique_stops, route_lenght };
+
+	double geo_route_lenght = 0.;
+	for (int i = 1; i < static_cast<int>(route.size()); ++i) {
+		geo_route_lenght += geo::ComputeDistance(route[i - 1]->coordinates, route[i]->coordinates);
+	}
+	return { count_all_stops, count_unique_stops, route_lenght, route_lenght / geo_route_lenght };
 }
 
 std::set<std::string_view> TransportCatalogue::GetBusesPassingThroughStop(std::string_view stop) const {
