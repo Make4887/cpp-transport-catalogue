@@ -1,10 +1,10 @@
-﻿#include <iomanip>
+#include <iomanip>
 #include <iostream>
 #include <string>
 
 #include "stat_reader.h"
 
-namespace transportcatalogue {
+namespace transport_catalogue {
 namespace reader {
 namespace detail{
 void PrintBusInfo(const TransportCatalogue& transport_catalogue, std::string_view bus, std::ostream& output) {

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <deque>
 #include <functional>
 #include <set>
@@ -9,7 +9,7 @@
 
 #include "geo.h"
 
-namespace transportcatalogue {
+namespace transport_catalogue {
 
 class TransportCatalogue {
 
@@ -42,13 +42,15 @@ class TransportCatalogue {
 public:
 	void AddStop(const std::string& name, geo::Coordinates coordinates);
 
-	void AddDistances(std::string_view name, std::unordered_map<std::string_view, int> distances);
+	void AddDistances(std::string_view main_name, std::string_view neighbour_name, int distance);
 
 	void AddBus(const std::string& name, const std::vector<std::string_view>& str_route);
 
 	Bus* FindBus(std::string_view name) const;
 
 	Stop* FindStop(std::string_view name) const;
+
+	int GetDistance(std::string_view main_name, std::string_view neighbour_name) const;
 
 	BusInfo GetBusInfo(std::string_view name) const;
 

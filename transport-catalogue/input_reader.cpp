@@ -1,16 +1,16 @@
-п»ї#include <algorithm>
+#include <algorithm>
 #include <cassert>
 #include <iterator>
 
 #include "input_reader.h"
 
-namespace transportcatalogue {
+namespace transport_catalogue {
 namespace reader {
 namespace parse {
 /**
- * РџР°СЂСЃРёС‚ СЃС‚СЂРѕРєСѓ РІРёРґР° "10.123,  -30.1837" Рё РІРѕР·РІСЂР°С‰Р°РµС‚ РїР°СЂСѓ РєРѕРѕСЂРґРёРЅР°С‚ (С€РёСЂРѕС‚Р°, РґРѕР»РіРѕС‚Р°)
+ * Парсит строку вида "10.123,  -30.1837" и возвращает пару координат (широта, долгота)
  */
-transportcatalogue::geo::Coordinates Coordinates(std::string_view str) {
+transport_catalogue::geo::Coordinates Coordinates(std::string_view str) {
     static const double nan = std::nan("");
 
     auto not_space = str.find_first_not_of(' ');
@@ -62,7 +62,7 @@ std::unordered_map<std::string_view, int> Distances(std::string_view str) {
 
 namespace detail{
 /**
- * РЈРґР°Р»СЏРµС‚ РїСЂРѕР±РµР»С‹ РІ РЅР°С‡Р°Р»Рµ Рё РєРѕРЅС†Рµ СЃС‚СЂРѕРєРё
+ * Удаляет пробелы в начале и конце строки
  */
 std::string_view Trim(std::string_view string) {
     const auto start = string.find_first_not_of(' ');
@@ -73,7 +73,7 @@ std::string_view Trim(std::string_view string) {
 }
 
 /**
- * Р Р°Р·Р±РёРІР°РµС‚ СЃС‚СЂРѕРєСѓ string РЅР° n СЃС‚СЂРѕРє, СЃ РїРѕРјРѕС‰СЊСЋ СѓРєР°Р·Р°РЅРЅРѕРіРѕ СЃРёРјРІРѕР»Р°-СЂР°Р·РґРµР»РёС‚РµР»СЏ delim
+ * Разбивает строку string на n строк, с помощью указанного символа-разделителя delim
  */
 std::vector<std::string_view> Split(std::string_view string, char delim) {
     std::vector<std::string_view> result;
@@ -95,9 +95,9 @@ std::vector<std::string_view> Split(std::string_view string, char delim) {
 }
 
 /**
- * РџР°СЂСЃРёС‚ РјР°СЂС€СЂСѓС‚.
- * Р”Р»СЏ РєРѕР»СЊС†РµРІРѕРіРѕ РјР°СЂС€СЂСѓС‚Р° (A>B>C>A) РІРѕР·РІСЂР°С‰Р°РµС‚ РјР°СЃСЃРёРІ РЅР°Р·РІР°РЅРёР№ РѕСЃС‚Р°РЅРѕРІРѕРє [A,B,C,A]
- * Р”Р»СЏ РЅРµРєРѕР»СЊС†РµРІРѕРіРѕ РјР°СЂС€СЂСѓС‚Р° (A-B-C-D) РІРѕР·РІСЂР°С‰Р°РµС‚ РјР°СЃСЃРёРІ РЅР°Р·РІР°РЅРёР№ РѕСЃС‚Р°РЅРѕРІРѕРє [A,B,C,D,C,B,A]
+ * Парсит маршрут.
+ * Для кольцевого маршрута (A>B>C>A) возвращает массив названий остановок [A,B,C,A]
+ * Для некольцевого маршрута (A-B-C-D) возвращает массив названий остановок [A,B,C,D,C,B,A]
  */
 std::vector<std::string_view> Route(std::string_view route) {
     if (route.find('>') != route.npos) {
@@ -150,7 +150,9 @@ void InputReader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) 
     }
     for (const CommandDescription& command_description : commands_) {
         if (command_description.command == "Stop"s) {
-            catalogue.AddDistances(command_description.id, parse::Distances(command_description.description));
+            for (auto [neighbour_name, dist] : parse::Distances(command_description.description)) {
+                catalogue.AddDistances(command_description.id, neighbour_name, dist);
+            }
         }
     }
     for (const CommandDescription& command_description : commands_) {

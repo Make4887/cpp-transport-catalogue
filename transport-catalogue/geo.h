@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace transportcatalogue {
+namespace transport_catalogue {
 namespace geo {
 
 struct Coordinates {

@@ -1,23 +1,21 @@
-﻿#include <unordered_set>
+#include <unordered_set>
 #include <utility>
 
 #include "transport_catalogue.h"
 
-namespace transportcatalogue {
+namespace transport_catalogue {
 
 void TransportCatalogue::AddStop(const std::string& name, geo::Coordinates coordinates) {
 	stops_.push_back({ name, coordinates });
 	stopname_to_stop_[stops_.back().name] = &stops_.back();
 }
 
-void TransportCatalogue::AddDistances(std::string_view name, std::unordered_map<std::string_view, int> distances) {
-	Stop* main_stop = stopname_to_stop_.at(name);
-	for (auto [neighbour_name, dist] : distances) {
-		Stop* neighbour_stop = stopname_to_stop_.at(neighbour_name);
-		distance_between_stops_[{main_stop, neighbour_stop}] = dist;
-		if (distance_between_stops_.count({ neighbour_stop, main_stop }) == 0) {
-			distance_between_stops_[{neighbour_stop, main_stop}] = dist;
-		}
+void TransportCatalogue::AddDistances(std::string_view main_name, std::string_view neighbour_name, int distance) {
+	Stop* main_stop = stopname_to_stop_.at(main_name);
+	Stop* neighbour_stop = stopname_to_stop_.at(neighbour_name);
+	distance_between_stops_[{main_stop, neighbour_stop}] = distance;
+	if (distance_between_stops_.count({ neighbour_stop, main_stop }) == 0) {
+		distance_between_stops_[{neighbour_stop, main_stop}] = distance;
 	}
 }
 
@@ -45,6 +43,10 @@ TransportCatalogue::Stop* TransportCatalogue::FindStop(std::string_view name) co
 		return stopname_to_stop_.at(name);
 	}
 	return nullptr;
+}
+
+int TransportCatalogue::GetDistance(std::string_view main_name, std::string_view neighbour_name) const {
+	return distance_between_stops_.at({ stopname_to_stop_.at(main_name), stopname_to_stop_.at(neighbour_name) });
 }
 
 TransportCatalogue::BusInfo TransportCatalogue::GetBusInfo(std::string_view bus) const {

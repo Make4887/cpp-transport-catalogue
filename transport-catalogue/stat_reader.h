@@ -1,11 +1,11 @@
-﻿#pragma once
+#pragma once
 
 #include <iosfwd>
 #include <string_view>
 
 #include "transport_catalogue.h"
 
-namespace transportcatalogue {
+namespace transport_catalogue {
 namespace reader {
 
 void ParseAndPrintStat(const TransportCatalogue& transport_catalogue, std::string_view request,
