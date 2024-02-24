@@ -1,5 +1,6 @@
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include "transport_catalogue.h"
 
@@ -19,30 +20,34 @@ void TransportCatalogue::AddDistances(std::string_view main_name, std::string_vi
 	}
 }
 
-void TransportCatalogue::AddBus(const std::string& name, const std::vector<std::string_view>& str_route) {
+void TransportCatalogue::AddBus(const std::string& name, const std::vector<std::string_view>& str_route, bool ring) {
 	std::vector<Stop*> route(str_route.size());
 	for (int i = 0; i < static_cast<int>(route.size()); ++i) {
 		route[i] = stopname_to_stop_.at(str_route[i]);
 	}
-	buses_.push_back({ name, std::move(route) });
+	buses_.push_back({ name, std::move(route) , ring });
 	busname_to_bus_[buses_.back().name] = &buses_.back();
 	for (auto stop : str_route) {
 		stop_to_busnames_[stopname_to_stop_.at(stop)].insert(busname_to_bus_.at(name)->name);
 	}
 }
 
-TransportCatalogue::Bus* TransportCatalogue::FindBus(std::string_view name) const {
+Bus* TransportCatalogue::FindBus(std::string_view name) const {
 	if (busname_to_bus_.count(name)) {
 		return busname_to_bus_.at(name);
 	}
 	return nullptr;
 }
 
-TransportCatalogue::Stop* TransportCatalogue::FindStop(std::string_view name) const {
+Stop* TransportCatalogue::FindStop(std::string_view name) const {
 	if (stopname_to_stop_.count(name)) {
 		return stopname_to_stop_.at(name);
 	}
 	return nullptr;
+}
+
+const std::deque<Bus>& TransportCatalogue::GetAllBuses() const {
+	return buses_;
 }
 
 int TransportCatalogue::GetDistance(std::string_view main_name, std::string_view neighbour_name) const {

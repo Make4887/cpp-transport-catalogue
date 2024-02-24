@@ -5,23 +5,12 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <vector>
 
-#include "geo.h"
+#include "domain.h"
 
 namespace transport_catalogue {
 
 class TransportCatalogue {
-
-	struct Stop {
-		std::string name;
-		geo::Coordinates coordinates;
-	};
-
-	struct Bus {
-		std::string name;
-		std::vector<Stop*> route;
-	};
 
 	struct BusInfo {
 		size_t count_all_stops;
@@ -44,11 +33,13 @@ public:
 
 	void AddDistances(std::string_view main_name, std::string_view neighbour_name, int distance);
 
-	void AddBus(const std::string& name, const std::vector<std::string_view>& str_route);
+	void AddBus(const std::string& name, const std::vector<std::string_view>& str_route, bool ring);
 
 	Bus* FindBus(std::string_view name) const;
 
 	Stop* FindStop(std::string_view name) const;
+
+	const std::deque<Bus>& GetAllBuses() const;
 
 	int GetDistance(std::string_view main_name, std::string_view neighbour_name) const;
 
