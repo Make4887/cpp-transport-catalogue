@@ -5,46 +5,40 @@
 
 namespace json {
 
-namespace detail {
-
-KeyItemContext DictValueItemContext::Key(std::string key) {
-	return builder_.Key(key);
-}
-Builder& DictValueItemContext::EndDict() {
-	return builder_.EndDict();
+Builder::BaseContext::BaseContext(Builder& builder)
+	:builder_(builder)
+{
 }
 
-DictValueItemContext KeyItemContext::Value(Node::Value value) {
-	return DictValueItemContext(builder_.Value(std::move(value)));
+Node Builder::BaseContext::Build() {
+	return builder_.Build();
 }
-DictItemContext KeyItemContext::StartDict() {
+Builder::DictValueContext Builder::BaseContext::Key(std::string key) {
+	return builder_.Key(std::move(key));
+}
+Builder::BaseContext Builder::BaseContext::Value(Node::Value value) {
+	return builder_.Value(std::move(value));
+}
+Builder::DictItemContext Builder::BaseContext::StartDict() {
 	return builder_.StartDict();
 }
-ArrayItemContext KeyItemContext::StartArray() {
+Builder::ArrayItemContext Builder::BaseContext::StartArray() {
 	return builder_.StartArray();
 }
-
-KeyItemContext DictItemContext::Key(std::string key) {
-	return builder_.Key(key);
-}
-Builder& DictItemContext::EndDict() {
+Builder::BaseContext Builder::BaseContext::EndDict() {
 	return builder_.EndDict();
 }
-
-ArrayItemContext ArrayItemContext::Value(Node::Value value) {
-	return ArrayItemContext(builder_.Value(std::move(value)));
-}
-DictItemContext ArrayItemContext::StartDict() {
-	return builder_.StartDict();
-}
-ArrayItemContext ArrayItemContext::StartArray() {
-	return builder_.StartArray();
-}
-Builder& ArrayItemContext::EndArray() {
+Builder::BaseContext Builder::BaseContext::EndArray() {
 	return builder_.EndArray();
 }
 
-} // detail
+Builder::DictItemContext Builder::DictValueContext::Value(Node::Value value) {
+	return BaseContext::Value(std::move(value));;
+}
+
+Builder::ArrayItemContext Builder::ArrayItemContext::Value(Node::Value value) {
+	return BaseContext::Value(std::move(value));
+}
 
 Node Builder::GetNode(Node::Value value) {
 	if (std::holds_alternative<int>(value)) {
@@ -68,7 +62,7 @@ Node Builder::GetNode(Node::Value value) {
 	return nullptr;
 }
 
-Builder& Builder::Value(Node::Value value) {
+Builder::BaseContext Builder::Value(Node::Value value) {
 	using namespace std::literals::string_literals;
 	if (nodes_stack_.empty() && root_.IsNull()) {
 		root_ = GetNode(value);
@@ -85,10 +79,10 @@ Builder& Builder::Value(Node::Value value) {
 	else {
 		throw std::logic_error("Value not in the correct place"s);
 	}
-	return *this;
+	return BaseContext{ *this };
 }
 
-detail::DictItemContext Builder::StartDict() {
+Builder::DictItemContext Builder::StartDict() {
 	using namespace std::literals::string_literals;
 	if (nodes_stack_.empty() && root_.IsNull()) {
 		root_ = Dict{};
@@ -108,10 +102,10 @@ detail::DictItemContext Builder::StartDict() {
 	else {
 		throw std::logic_error("Dict not in the correct place"s);
 	}
-	return detail::DictItemContext(*this);
+	return BaseContext{ *this };
 }
 
-detail::ArrayItemContext Builder::StartArray() {
+Builder::ArrayItemContext Builder::StartArray() {
 	using namespace std::literals::string_literals;
 	if (nodes_stack_.empty() && root_.IsNull()) {
 		root_ = Array{};
@@ -131,10 +125,10 @@ detail::ArrayItemContext Builder::StartArray() {
 	else {
 		throw std::logic_error("Array not in the correct place"s);
 	}
-	return detail::ArrayItemContext(*this);
+	return BaseContext{ *this };
 }
 
-detail::KeyItemContext Builder::Key(std::string key) {
+Builder::DictValueContext Builder::Key(std::string key) {
 	using namespace std::literals::string_literals;
 	if (!nodes_stack_.empty() && nodes_stack_.back()->IsDict() && !key_) {
 		key_ = key;
@@ -142,10 +136,10 @@ detail::KeyItemContext Builder::Key(std::string key) {
 	else {
 		throw std::logic_error("Key not in the correct place"s);
 	}
-	return detail::KeyItemContext(*this);
+	return BaseContext{ *this };
 }
 
-Builder& Builder::EndDict() {
+Builder::BaseContext Builder::EndDict() {
 	using namespace std::literals::string_literals;
 	if (!nodes_stack_.empty() && nodes_stack_.back()->IsDict() && !key_) {
 		nodes_stack_.pop_back();
@@ -153,10 +147,10 @@ Builder& Builder::EndDict() {
 	else {
 		throw std::logic_error("EndDict not in the correct place"s);
 	}
-	return *this;
+	return BaseContext{ *this };
 }
 
-Builder& Builder::EndArray() {
+Builder::BaseContext Builder::EndArray() {
 	using namespace std::literals::string_literals;
 	if (!nodes_stack_.empty() && nodes_stack_.back()->IsArray()) {
 		nodes_stack_.pop_back();
@@ -164,7 +158,7 @@ Builder& Builder::EndArray() {
 	else {
 		throw std::logic_error("EndDict not in the correct place"s);
 	}
-	return *this;
+	return BaseContext{ *this };
 }
 
 Node Builder::Build() {
