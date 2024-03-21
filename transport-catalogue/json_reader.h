@@ -15,6 +15,7 @@ public:
     void ApplyStatCommands(const transport_catalogue::TransportCatalogue& catalogue, const map_renderer::MapRenderer& map_renderer,
                             std::ostream& output) const;
     void HandleRenderSettings(map_renderer::MapRenderer& map_render);
+    void AddRoutingSettings(transport_catalogue::TransportCatalogue& catalogue) const;
 
 private:
     json::Document document_;

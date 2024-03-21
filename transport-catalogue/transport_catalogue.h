@@ -1,12 +1,15 @@
 #pragma once
 #include <deque>
 #include <functional>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 
 #include "domain.h"
+#include "graph.h"
+#include "router.h"
 
 namespace transport_catalogue {
 
@@ -35,6 +38,8 @@ public:
 
 	void AddBus(const std::string& name, const std::vector<std::string_view>& str_route, bool ring);
 
+	void AddRoutingSettings(double bus_velocity, int bus_wait_time);
+
 	Bus* FindBus(std::string_view name) const;
 
 	Stop* FindStop(std::string_view name) const;
@@ -47,6 +52,12 @@ public:
 
 	std::set<std::string_view> GetBusesPassingThroughStop(std::string_view stop) const;
 
+	std::optional<RouteInfo> GetRouteInfo(std::string_view from, std::string_view to, const graph::Router<double>& router) const;
+
+	const graph::DirectedWeightedGraph<double>& GetGraph() const;
+
+	void CreateGraph();
+
 private:
 
 	std::deque<Stop> stops_;
@@ -55,5 +66,10 @@ private:
 	std::unordered_map<std::string_view, Bus*> busname_to_bus_;
 	std::unordered_map<Stop*, std::set<std::string_view>> stop_to_busnames_;
 	std::unordered_map<std::pair<Stop*, Stop*>, int, StopsHasher> distance_between_stops_;
+	double bus_velocity_ = 40.;
+	int bus_wait_time_ = 6;
+	graph::DirectedWeightedGraph<double> graph_;
+	std::unordered_map<std::string_view, std::pair<graph::VertexId, graph::VertexId>> stopname_to_vertex_;
+	std::unordered_map<int, EdgeInfo> edge_id_to_edge_;
 };
 }

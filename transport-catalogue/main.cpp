@@ -11,6 +11,7 @@ int main() {
     TransportCatalogue catalogue;
     json_reader::JsonReader reader(cin);
     reader.ApplyBaseCommands(catalogue);
+    reader.AddRoutingSettings(catalogue);
 
     map_renderer::MapRenderer renderer;
     reader.HandleRenderSettings(renderer);

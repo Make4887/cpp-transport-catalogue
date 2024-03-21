@@ -32,6 +32,11 @@ void TransportCatalogue::AddBus(const std::string& name, const std::vector<std::
 	}
 }
 
+void TransportCatalogue::AddRoutingSettings(double bus_velocity, int bus_wait_time) {
+	bus_velocity_ = bus_velocity;
+	bus_wait_time_ = bus_wait_time;
+}
+
 Bus* TransportCatalogue::FindBus(std::string_view name) const {
 	if (busname_to_bus_.count(name)) {
 		return busname_to_bus_.at(name);
@@ -78,5 +83,79 @@ std::set<std::string_view> TransportCatalogue::GetBusesPassingThroughStop(std::s
 		return {};
 	}
 	return stop_to_busnames_.at(stopname_to_stop_.at(stop));
+}
+
+std::optional<RouteInfo> TransportCatalogue::GetRouteInfo(std::string_view from, std::string_view to, const graph::Router<double>& router) const {
+	using namespace std::literals::string_literals;
+	auto rout_info = router.BuildRoute(stopname_to_vertex_.at(from).first, stopname_to_vertex_.at(to).first);
+	if (!rout_info.has_value()) {
+		return std::nullopt;
+	}
+	RouteInfo result;
+	result.all_time = rout_info->weight;
+	for (graph::EdgeId edge_id: rout_info->edges) {
+		result.edges.push_back(edge_id_to_edge_.at(static_cast<int>(edge_id)));
+	}
+	return result;
+}
+
+const graph::DirectedWeightedGraph<double>& TransportCatalogue::GetGraph() const {
+	return graph_;
+}
+
+void TransportCatalogue::CreateGraph() {
+	graph_ = graph::DirectedWeightedGraph<double>(2 * stops_.size());
+	graph::VertexId ind_vertex = 0;
+	for (const Stop& stop : stops_) {
+		stopname_to_vertex_[stop.name] = { ind_vertex, ind_vertex + 1 };
+		graph::Edge<double> edge;
+		edge.from = ind_vertex;
+		edge.to = ind_vertex + 1;
+		edge.weight = bus_wait_time_;
+		edge_id_to_edge_[static_cast<int>(graph_.AddEdge(edge))] = { stop.name, static_cast<double>(bus_wait_time_) };
+		ind_vertex += 2;
+	}
+	for (const Bus& bus : buses_) {
+		if (bus.ring) {
+			for (int i = 0; i < static_cast<int>(bus.route.size()); ++i) {
+				int route_lenght = 0;
+				for (int j = i + 1; j < static_cast<int>(bus.route.size()); ++j) {
+					if (bus.route[i]->name == bus.route[j]->name) {
+						continue;
+					}
+					graph::Edge<double> edge;
+					edge.from = stopname_to_vertex_[bus.route[i]->name].second;
+					edge.to = stopname_to_vertex_[bus.route[j]->name].first;
+					route_lenght += distance_between_stops_.at({ bus.route[j - 1], bus.route[j] });
+					edge.weight = route_lenght / bus_velocity_ * 60. / 1000.;
+					edge_id_to_edge_[static_cast<int>(graph_.AddEdge(edge))] = { bus.name, edge.weight, j - i };
+				}
+			}
+		}
+		else {
+			for (int i = 0; i < static_cast<int>(bus.route.size()) / 2; ++i) {
+				int route_lenght = 0;
+				for (int j = i + 1; j <= static_cast<int>(bus.route.size()) / 2; ++j) {
+					graph::Edge<double> edge;
+					edge.from = stopname_to_vertex_[bus.route[i]->name].second;
+					edge.to = stopname_to_vertex_[bus.route[j]->name].first;
+					route_lenght += distance_between_stops_.at({ bus.route[j-1], bus.route[j] });
+					edge.weight = route_lenght / bus_velocity_ * 60. / 1000.;
+					edge_id_to_edge_[static_cast<int>(graph_.AddEdge(edge))] = { bus.name, edge.weight, j - i };
+				}
+			}
+			for (int i = static_cast<int>(bus.route.size()) / 2; i < static_cast<int>(bus.route.size()); ++i) {
+				int route_lenght = 0;
+				for (int j = i + 1; j < static_cast<int>(bus.route.size()); ++j) {
+					graph::Edge<double> edge;
+					edge.from = stopname_to_vertex_[bus.route[i]->name].second;
+					edge.to = stopname_to_vertex_[bus.route[j]->name].first;
+					route_lenght += distance_between_stops_.at({ bus.route[j - 1], bus.route[j] });
+					edge.weight = route_lenght / bus_velocity_ * 60. / 1000.;
+					edge_id_to_edge_[static_cast<int>(graph_.AddEdge(edge))] = { bus.name, edge.weight, j - i };
+				}
+			}
+		}
+	}
 }
 }

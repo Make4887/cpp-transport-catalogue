@@ -77,7 +77,6 @@ void AddStopInfo(const transport_catalogue::TransportCatalogue& catalogue, const
 void AddMapInfo(const transport_catalogue::TransportCatalogue& catalogue, const map_renderer::MapRenderer& map_renderer,
                         const json::Dict& command, json::Builder& builder) {
     using namespace std::literals::string_literals;
-    using namespace json;
     RequestHandler request_handler(catalogue, map_renderer);
     std::ostringstream buf_stream;
     request_handler.RenderMap(buf_stream);
@@ -85,6 +84,40 @@ void AddMapInfo(const transport_catalogue::TransportCatalogue& catalogue, const 
                 .Key("map"s).Value(buf_stream.str())
                 .Key("request_id"s).Value(command.at("id"s).AsInt())
             .EndDict();
+}
+
+void AddRouteInfo(const transport_catalogue::TransportCatalogue& catalogue, const json::Dict& command, json::Builder& builder, const graph::Router<double>& router) {
+    using namespace std::literals::string_literals;
+    using namespace json;
+    std::optional<RouteInfo> route_info = catalogue.GetRouteInfo(command.at("from"s).AsString(), command.at("to"s).AsString(), router);
+    if (!route_info.has_value()) {
+        builder.StartDict()
+            .Key("request_id"s).Value(command.at("id"s).AsInt())
+            .Key("error_message"s).Value("not found"s)
+            .EndDict();
+        return;
+    }
+    Array ar;
+    for (const EdgeInfo& edge_info : route_info->edges) {
+        Dict dict;
+        if (edge_info.span_count == 0) {
+            dict["type"s] = "Wait"s;
+            dict["stop_name"s] = std::string(edge_info.name);
+            dict["time"s] = edge_info.time;
+        }
+        else {
+            dict["type"s] = "Bus"s;
+            dict["bus"s] = std::string(edge_info.name);
+            dict["span_count"s] = edge_info.span_count;
+            dict["time"s] = edge_info.time;
+        }
+        ar.push_back(std::move(dict));
+    }
+    builder.StartDict()
+        .Key("request_id"s).Value(command.at("id"s).AsInt())
+        .Key("total_time"s).Value(route_info->all_time)
+        .Key("items"s).Value(std::move(ar))
+        .EndDict();
 }
 
 svg::Color GetColor(const json::Node& color) {
@@ -143,10 +176,18 @@ void JsonReader::ApplyBaseCommands([[maybe_unused]] transport_catalogue::Transpo
     }
 }
 
-void JsonReader::ApplyStatCommands(const transport_catalogue::TransportCatalogue& catalogue, 
-                                    const map_renderer::MapRenderer& map_renderer, std::ostream& output) const {
+void JsonReader::AddRoutingSettings(transport_catalogue::TransportCatalogue& catalogue) const {
+    using namespace std::literals::string_literals;
+    const json::Dict& settings_map = document_.GetRoot().AsDict().at("routing_settings"s).AsDict();
+    catalogue.AddRoutingSettings(settings_map.at("bus_velocity"s).AsDouble(), settings_map.at("bus_wait_time"s).AsInt());
+    catalogue.CreateGraph();
+}
+
+void JsonReader::ApplyStatCommands(const transport_catalogue::TransportCatalogue& catalogue,
+    const map_renderer::MapRenderer& map_renderer, std::ostream& output) const {
     using namespace std::literals::string_literals;
     using namespace json;
+    graph::Router<double> router(catalogue.GetGraph());
     Builder builder;
     builder.StartArray();
     for (const auto& command : document_.GetRoot().AsDict().at("stat_requests"s).AsArray()) {
@@ -158,6 +199,9 @@ void JsonReader::ApplyStatCommands(const transport_catalogue::TransportCatalogue
         }
         else if (command.AsDict().at("type"s).AsString() == "Map"s) {
             detail::AddMapInfo(catalogue, map_renderer, command.AsDict(), builder);
+        }
+        else if (command.AsDict().at("type"s).AsString() == "Route"s) {
+            detail::AddRouteInfo(catalogue, command.AsDict(), builder, router);
         }
     }
     builder.EndArray();
